@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SMART on FHIR Launch</title>
+  <script src="https://cdn.jsdelivr.net/npm/fhirclient/build/fhir-client.js"></script>
+</head>
+<body>
+<h1>Launching SMART on FHIR App</h1>
+<script>
+  FHIR.oauth2.authorize({
+    clientId: 'SmartLiver',
+    scope: 'launch/patient patient/*.read',
+    redirectUri: 'index.html',
+    iss: 'https://r4.smarthealthit.org',
+    completeInTarget: true
+  });
+</script>
+</body>
+</html>
