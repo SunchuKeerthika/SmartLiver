@@ -1,31 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SMART on FHIR App</title>
-  <script src="https://cdn.jsdelivr.net/npm/fhirclient/build/fhir-client.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMART on FHIR App</title>
+    <script src="https://cdn.jsdelivr.net/npm/fhirclient/build/fhir-client.js"></script>
 </head>
 <body>
 <h1>SMART on FHIR App</h1>
 <div id="patient-info"></div>
 
 <script>
-  FHIR.oauth2.ready()
-    .then(client => {
-      client.patient.read().then(
-        patient => {
-          const patientInfo = document.getElementById('patient-info');
-          patientInfo.innerHTML = `
+    FHIR.oauth2.ready()
+        .then(client => {
+            client.patient.read().then(
+                patient => {
+                    const patientInfo = document.getElementById('patient-info');
+                    patientInfo.innerHTML = `
                             <h2>Patient Information</h2>
                             <p>Name: ${patient.name[0].given.join(' ')} ${patient.name[0].family}</p>
                             <p>Gender: ${patient.gender}</p>
                             <p>Birth Date: ${patient.birthDate}</p>
                         `;
-        }
-      );
-    })
-    .catch(console.error);
+                }
+            );
+        })
+        .catch(console.error);
 </script>
 </body>
 </html>
