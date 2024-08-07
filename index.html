@@ -56,11 +56,14 @@
                 const resource = entry.resource;
                 const date = moment(resource.effectiveDateTime);
                 const value = resource.valueQuantity.value;
-                const code = resource.code.coding[0].code;
+                const codings = resource.code.coding;
 
-                if (code === '8302-2') { // Height
+                const isHeight = codings.some(coding => coding.code === '8302-2');
+                const isWeight = codings.some(coding => coding.code === '29463-7');
+
+                if (isHeight) { // Height
                     heightData.push({x: date, y: value});
-                } else if (code === '29463-7') { // Weight
+                } else if (isWeight) { // Weight
                     weightData.push({x: date, y: value});
                 }
             });
