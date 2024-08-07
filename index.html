@@ -69,20 +69,37 @@
             console.log("FHIR client initialized:", client);
             return Promise.all([
                 client.patient.read(),
-                client.request(`Observation?patient=${client.patient.id}&code=http://loinc.org|8302-2,http://loinc.org|29463-7&_sort=date`)
+                client.request(`Observation?patient=${client.patient.id}&code=http://loinc.org|8302-2,http://loinc.org|29463-7&_sort=date`),
+                client.request(`Encounter?patient=${client.patient.id}`)
             ]);
         })
-        .then(([patient, observations]) => {
+        .then(([patient, observations, encounters]) => {
             console.log("Patient data received:", patient);
             console.log("Observations received:", observations);
+            console.log("Encounters received:", encounters);
+
+            // Process Observations
+            let labsStatus = 'Incomplete';
+            if (observations.entry && observations.entry.length > 0) {
+                labsStatus = 'Complete';
+            }
+
+            // Process Encounters
+            let recentVisitDate = 'N/A';
+            let visitReason = 'N/A';
+            if (encounters.entry && encounters.entry.length > 0) {
+                const recentEncounter = encounters.entry[0].resource;
+                recentVisitDate = moment(recentEncounter.period.start).format('DD MMM, YYYY');
+                visitReason = recentEncounter.reason ? recentEncounter.reason[0].text : 'N/A';
+            }
 
             const patientData = {
                 name: `${patient.name[0].given.join(' ')} ${patient.name[0].family}`,
                 mrn: patient.identifier[0].value,
-                labs: 'Incomplete', // Placeholder for labs status
-                visitReason: 'N/A', // Placeholder for visit reason
-                recentVisit: 'N/A', // Placeholder for recent visit
-                communication: 'Send Notification' // Placeholder for communication action
+                labs: labsStatus,
+                visitReason: visitReason,
+                recentVisit: recentVisitDate,
+                communication: 'Send Notification'
             };
 
             // Sample data population
