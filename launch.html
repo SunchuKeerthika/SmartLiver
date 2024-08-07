@@ -11,7 +11,7 @@
 <script>
   FHIR.oauth2.authorize({
     clientId: '7fd6d8c2-fecb-4256-92ef-e5e0f64cf030',
-    scope: 'launch/patient patient/*.read',
+    scope: 'launch patient/Patient.read patient/Observation.read',
     redirectUri: 'https://sunbiz.github.io/SmartLiver/index.html',
     iss: 'https://fhir-open.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d',
   });
