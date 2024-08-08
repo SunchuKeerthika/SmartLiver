@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SMART on FHIR App - Patient Growth Charts</title>
+    <title>SMART on FHIR App - Patient List</title>
     <script src="https://cdn.jsdelivr.net/npm/fhirclient/build/fhir-client.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -33,26 +32,17 @@
         th {
             background-color: #f2f2f2;
         }
-        .notification {
-            color: blue;
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>Patient Growth Charts</h1>
-    <div id="patient-info"></div>
+    <h1>Patient List</h1>
     <div id="error-info" style="color: red;"></div>
     <table id="patient-table">
         <thead>
             <tr>
                 <th>Name</th>
                 <th>MRN</th>
-                <th>Labs</th>
-                <th>Visit Reason</th>
-                <th>Recent Visit</th>
-                <th>Patient Communication</th>
             </tr>
         </thead>
         <tbody></tbody>
@@ -60,63 +50,28 @@
 </div>
 
 <script>
-    const patientInfo = document.getElementById('patient-info');
     const errorInfo = document.getElementById('error-info');
     const patientTable = document.getElementById('patient-table').querySelector('tbody');
 
     FHIR.oauth2.ready()
         .then(client => {
             console.log("FHIR client initialized:", client);
-            return Promise.all([
-                client.patient.read(),
-                client.request(`Observation?patient=${client.patient.id}&code=http://loinc.org|8302-2,http://loinc.org|29463-7&_sort=date`),
-                client.request(`Encounter?patient=${client.patient.id}`)
-            ]);
+            return client.patient.read();
         })
-        .then(([patient, observations, encounters]) => {
+        .then(patient => {
             console.log("Patient data received:", patient);
-            console.log("Observations received:", observations);
-            console.log("Encounters received:", encounters);
-
-            // Process Observations
-            let labsStatus = 'Incomplete';
-            if (observations.entry && observations.entry.length > 0) {
-                labsStatus = 'Complete';
-            }
-
-            // Process Encounters
-            let recentVisitDate = 'N/A';
-            let visitReason = 'N/A';
-            if (encounters.entry && encounters.entry.length > 0) {
-                const recentEncounter = encounters.entry[0].resource;
-                recentVisitDate = moment(recentEncounter.period.start).format('DD MMM, YYYY');
-                visitReason = recentEncounter.reason ? recentEncounter.reason[0].text : 'N/A';
-            }
 
             const patientData = {
                 name: `${patient.name[0].given.join(' ')} ${patient.name[0].family}`,
-                mrn: patient.identifier[0].value,
-                labs: labsStatus,
-                visitReason: visitReason,
-                recentVisit: recentVisitDate,
-                communication: 'Send Notification'
+                mrn: patient.identifier[0].value
             };
 
-            // Sample data population
-            const samplePatients = Array(12).fill(patientData);
-
-            samplePatients.forEach(p => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${p.name}</td>
-                    <td>${p.mrn}</td>
-                    <td>${p.labs}</td>
-                    <td>${p.visitReason}</td>
-                    <td>${p.recentVisit}</td>
-                    <td><span class="notification">${p.communication}</span></td>
-                `;
-                patientTable.appendChild(row);
-            });
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${patientData.name}</td>
+                <td>${patientData.mrn}</td>
+            `;
+            patientTable.appendChild(row);
 
         })
         .catch(error => {
