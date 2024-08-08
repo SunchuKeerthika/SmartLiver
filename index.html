@@ -3,76 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SMART on FHIR App - Patient List</title>
+    <title>SMART on FHIR App - Patient Growth Charts</title>
     <script src="https://cdn.jsdelivr.net/npm/fhirclient/build/fhir-client.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.0/dist/chartjs-adapter-moment.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f4f4f4;
-        }
-        .container {
-            width: 100%;
-            margin: 0 auto;
-        }
-        h1 {
-            text-align: center;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            padding: 10px;
-            border: 1px solid #ddd;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
+        .chart-container {
+            width: 80%;
+            margin: 20px auto;
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <h1>Patient List</h1>
-    <div id="error-info" style="color: red;"></div>
-    <table id="patient-table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>MRN</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+<h1>Patient Growth Charts</h1>
+<div id="patient-info"></div>
+<div id="error-info" style="color: red;"></div>
+<div class="chart-container">
+    <canvas id="heightChart"></canvas>
+</div>
+<div class="chart-container">
+    <canvas id="weightChart"></canvas>
 </div>
 
 <script>
+    const patientInfo = document.getElementById('patient-info');
     const errorInfo = document.getElementById('error-info');
-    const patientTable = document.getElementById('patient-table').querySelector('tbody');
 
     FHIR.oauth2.ready()
         .then(client => {
             console.log("FHIR client initialized:", client);
-            return client.request('Patient?_count=100');
+            return Promise.all([
+                client.patient.read(),
+                client.request(`Observation?patient=${client.patient.id}&code=http://loinc.org|8302-2,http://loinc.org|29463-7&_sort=date`)
+            ]);
         })
-        .then(bundle => {
-            console.log("Patient bundle received:", bundle);
+        .then(([patient, observations]) => {
+            console.log("Patient data received:", patient);
+            console.log("Observations received:", observations);
 
-            bundle.entry.forEach(entry => {
-                const patient = entry.resource;
-                const name = patient.name ? `${patient.name[0].given.join(' ')} ${patient.name[0].family}` : 'No Name';
-                const mrn = patient.identifier ? patient.identifier[0].value : 'No MRN';
-
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${name}</td>
-                    <td>${mrn}</td>
+            patientInfo.innerHTML = `
+                    <h2>Patient Information</h2>
+                    <p>Name: ${patient.name[0].given.join(' ')} ${patient.name[0].family}</p>
+                    <p>Gender: ${patient.gender}</p>
+                    <p>Birth Date: ${patient.birthDate}</p>
                 `;
-                patientTable.appendChild(row);
+
+            const heightData = [];
+            const weightData = [];
+
+            observations.entry.forEach(entry => {
+                const resource = entry.resource;
+                const date = moment(resource.effectiveDateTime);
+                const value = resource.valueQuantity.value;
+                const codings = resource.code.coding;
+
+                const isHeight = codings.some(coding => coding.code === '8302-2');
+                const isWeight = codings.some(coding => coding.code === '29463-7');
+
+                if (isHeight) { // Height
+                    heightData.push({x: date, y: value});
+                } else if (isWeight) { // Weight
+                    weightData.push({x: date, y: value});
+                }
             });
+
+            createHeightChart(heightData);
+            createWeightChart(weightData);
         })
         .catch(error => {
             console.error("Error occurred:", error);
@@ -81,6 +78,92 @@
                 errorInfo.innerHTML += `<pre>${error.stack}</pre>`;
             }
         });
+
+    function createHeightChart(heightData) {
+        const ctx = document.getElementById('heightChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: 'Height (cm)',
+                    data: heightData,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Patient Height Over Time'
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'month'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Height (cm)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function createWeightChart(weightData) {
+        const ctx = document.getElementById('weightChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: 'Weight (kg)',
+                    data: weightData,
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Patient Weight Over Time'
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'month'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Weight (kg)'
+                        }
+                    }
+                }
+            }
+        });
+    }
 </script>
 </body>
 </html>
