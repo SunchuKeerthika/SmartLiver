@@ -56,23 +56,23 @@
     FHIR.oauth2.ready()
         .then(client => {
             console.log("FHIR client initialized:", client);
-            return client.patient.read();
+            return client.request('Patient?_count=100');
         })
-        .then(patient => {
-            console.log("Patient data received:", patient);
+        .then(bundle => {
+            console.log("Patient bundle received:", bundle);
 
-            const patientData = {
-                name: `${patient.name[0].given.join(' ')} ${patient.name[0].family}`,
-                mrn: patient.identifier[0].value
-            };
+            bundle.entry.forEach(entry => {
+                const patient = entry.resource;
+                const name = patient.name ? `${patient.name[0].given.join(' ')} ${patient.name[0].family}` : 'No Name';
+                const mrn = patient.identifier ? patient.identifier[0].value : 'No MRN';
 
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${patientData.name}</td>
-                <td>${patientData.mrn}</td>
-            `;
-            patientTable.appendChild(row);
-
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${name}</td>
+                    <td>${mrn}</td>
+                `;
+                patientTable.appendChild(row);
+            });
         })
         .catch(error => {
             console.error("Error occurred:", error);
